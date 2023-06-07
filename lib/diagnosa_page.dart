@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'config/config.dart';
 
 class DiagnosaPage extends StatefulWidget {
   @override
@@ -16,8 +17,7 @@ class _DiagnosaPageState extends State<DiagnosaPage> {
   Future<bool> fetchData() async {
     try {
       final response = await http
-          .get(Uri.parse(
-              'https://api.sistempakarlambung.masuk.web.id/apiv3/index.php/gejala'))
+          .get(Uri.parse('${Config.apiUrl}/gejala'))
           .timeout(const Duration(seconds: 10));
       if (response.statusCode == 200) {
         var decodedResponse = jsonDecode(response.body);
@@ -42,8 +42,7 @@ class _DiagnosaPageState extends State<DiagnosaPage> {
   Future<bool> fetchKondisi() async {
     try {
       final response = await http
-          .get(Uri.parse(
-              'https://api.sistempakarlambung.masuk.web.id/apiv3/index.php/kondisi'))
+          .get(Uri.parse('${Config.apiUrl}/kondisi'))
           .timeout(const Duration(seconds: 10));
       if (response.statusCode == 200) {
         var decodedResponse = jsonDecode(response.body);
