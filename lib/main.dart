@@ -18,6 +18,26 @@ class MyApp extends StatelessWidget {
   }
 }
 
+void showAlert(BuildContext context, String message) {
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Text('Pemberitahuan'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            child: Text('OK'),
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+          ),
+        ],
+      );
+    },
+  );
+}
+
 class Dashboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -79,19 +99,28 @@ class Dashboard extends StatelessWidget {
                           title: 'Riwayat',
                           icon: Icons.history,
                           color: Colors.green.shade900,
-                          onTap: () {}, // Tambahkan ini
+                          onTap: () {
+                            showAlert(
+                                context, 'Fitur sedang dalam pengembangan.');
+                          }, // Tambahkan ini
                         ),
                         DashboardCard(
                           title: 'Keterangan',
                           icon: Icons.info,
                           color: Colors.orange.shade900,
-                          onTap: () {}, // Tambahkan ini
+                          onTap: () {
+                            showAlert(
+                                context, 'Fitur sedang dalam pengembangan.');
+                          }, // Tambahkan ini
                         ),
                         DashboardCard(
                           title: 'Tentang',
                           icon: Icons.help,
                           color: Colors.red.shade900,
-                          onTap: () {}, // Tambahkan ini
+                          onTap: () {
+                            showAlert(
+                                context, 'Fitur sedang dalam pengembangan.');
+                          }, // Tambahkan ini
                         ),
                       ],
                     ),
