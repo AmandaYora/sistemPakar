@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'config/config.dart';
+import 'package:intl/intl.dart';
+import 'diagnosa_result_page.dart';
 
 class DiagnosaPage extends StatefulWidget {
   @override
@@ -13,6 +15,160 @@ class _DiagnosaPageState extends State<DiagnosaPage> {
   Map<String, String> selectedKondisi = {};
   List<dynamic> kondisi = [];
   bool isLoading = true;
+
+  Map<String, double> bobotKondisi = {
+    'Pasti ya': 1,
+    'Hampir pasti ya': 0.8,
+    'Kemungkinan besar ya': 0.6,
+    'Mungkin ya': 0.4,
+    'Tidak tahu': -0.2,
+    'Mungkin tidak': -0.4,
+    'Kemungkinan besar tidak': -0.6,
+    'Hampir pasti tidak': -0.8,
+    'Pasti tidak': -1
+  };
+
+  Future<void> diagnose(BuildContext context) async {
+    // Count how many symptoms have been selected
+    int selectedCount = selectedKondisi.values
+        .where((value) => value != 'Pilih jika sesuai')
+        .length;
+
+    // Check if at least one symptom has been selected
+    if (selectedCount <= 0) {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Error'),
+            content: Text('Silahkan pilih minimal satu gejala.'),
+            actions: [
+              TextButton(
+                child: Text('OK'),
+                onPressed: () {
+                  Navigator.of(context).pop(); // Close the dialog
+                },
+              ),
+            ],
+          );
+        },
+      );
+      return;
+    }
+
+    try {
+      var responsePenyakit =
+          await http.get(Uri.parse('${Config.apiUrl}/penyakit'));
+      var penyakitList = jsonDecode(responsePenyakit.body)['result'] as List;
+
+      var responsePengetahuan =
+          await http.get(Uri.parse('${Config.apiUrl}/pengetahuan'));
+      var pengetahuanList =
+          jsonDecode(responsePengetahuan.body)['result'] as List;
+
+      Map<String, Map<String, dynamic>> penyakitScores = {};
+
+      for (var penyakit in penyakitList) {
+        double cflama = 0;
+        double cfskr = 0;
+
+        for (var pengetahuan in pengetahuanList) {
+          if (pengetahuan['kode_penyakit'] == penyakit['kode_penyakit'] &&
+              selectedKondisi.containsKey(pengetahuan['kode_gejala'])) {
+            double? bobot =
+                bobotKondisi[selectedKondisi[pengetahuan['kode_gejala']]!];
+            if (bobot == null) continue;
+
+            double cf = (double.parse(pengetahuan['nilai_mb']) -
+                    double.parse(pengetahuan['nilai_md'])) *
+                bobot;
+
+            if (cflama == 0) {
+              cflama = cf;
+            } else {
+              cfskr = cf;
+              cflama = cflama + cfskr * (1 - cflama);
+            }
+
+            if (cflama > 0) {
+              penyakitScores[penyakit['kode_penyakit']] = {
+                'score': cflama,
+                'nama': penyakit['nama_penyakit'],
+                'detail': penyakit['detail_penyakit'],
+                'gambar': penyakit['gambar'],
+              };
+            }
+          }
+        }
+      }
+
+      var sortedScores = penyakitScores.entries.toList()
+        ..sort((a, b) => b.value['score'].compareTo(a.value['score']));
+
+      Map<String, Map<String, dynamic>> sortedPenyakitScores =
+          Map.fromEntries(sortedScores);
+
+      // serialize sortedPenyakitScores
+      String jsonPenyakitScores = jsonEncode(sortedPenyakitScores);
+      String jsonGejala = jsonEncode(selectedKondisi);
+      var highestScoredPenyakitId = sortedScores[0].key;
+      double highestScore = sortedScores[0].value['score'];
+      String highestScoreString = highestScore.toString();
+      var now = DateTime.now();
+      var formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
+      String formattedDate = formatter.format(now);
+
+      // prepare data for http post
+      Map<String, String> body = {
+        'tanggal': formattedDate, // replace with actual value
+        'gejala': jsonGejala, // replace with actual value
+        'penyakit': jsonPenyakitScores,
+        'hasil_id': highestScoredPenyakitId, // replace with actual value
+        'hasil_nilai': highestScoreString, // replace with actual value
+      };
+
+      // send http post request
+      var response = await http.post(
+        Uri.parse('${Config.apiUrl}/hasil/simpan'),
+        headers: <String, String>{
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: body,
+      );
+
+      // check response status code
+      if (response.statusCode == 200) {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => DiagnosaResultPage(
+              sortedPenyakitScores: sortedPenyakitScores,
+            ),
+          ),
+        );
+      } else {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text('Error'),
+              content: Text('Gagal mendiagnosa data.'),
+              actions: [
+                TextButton(
+                  child: Text('OK'),
+                  onPressed: () {
+                    Navigator.of(context).pop(); // Close the dialog
+                  },
+                ),
+              ],
+            );
+          },
+        );
+        print('Failed to diagnose data. Status code: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Caught error: $e');
+    }
+  }
 
   Future<bool> fetchData() async {
     try {
@@ -35,6 +191,9 @@ class _DiagnosaPageState extends State<DiagnosaPage> {
         throw Exception('Failed to load data');
       }
     } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error occurred: $e')),
+      );
       return false;
     }
   }
@@ -52,6 +211,9 @@ class _DiagnosaPageState extends State<DiagnosaPage> {
         throw Exception('Failed to load kondisi');
       }
     } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error occurred: $e')),
+      );
       return false;
     }
   }
@@ -149,7 +311,7 @@ class _DiagnosaPageState extends State<DiagnosaPage> {
                               },
                               items: <String>[
                                 'Pilih jika sesuai',
-                                ...kondisi.map((value) => value['kondisi'])
+                                ...bobotKondisi.keys.toList(),
                               ].map<DropdownMenuItem<String>>((value) {
                                 return DropdownMenuItem<String>(
                                   value: value,
@@ -169,9 +331,7 @@ class _DiagnosaPageState extends State<DiagnosaPage> {
                 height: 60,
                 color: Colors.blue,
                 child: TextButton(
-                  onPressed: () {
-                    // Logika untuk aksi tombol Diagnosa
-                  },
+                  onPressed: () => diagnose(context),
                   child: Text(
                     'Diagnosa',
                     style: TextStyle(
