@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'config/config.dart';
 import 'package:intl/intl.dart';
 import 'diagnosa_result_page.dart';
+import 'config/database.dart';
 
 class DiagnosaPage extends StatefulWidget {
   @override
@@ -15,6 +16,7 @@ class _DiagnosaPageState extends State<DiagnosaPage> {
   Map<String, String> selectedKondisi = {};
   List<dynamic> kondisi = [];
   bool isLoading = true;
+  String unique_id = '';
 
   Map<String, double> bobotKondisi = {
     'Pasti ya': 1,
@@ -124,7 +126,8 @@ class _DiagnosaPageState extends State<DiagnosaPage> {
         'gejala': jsonGejala, // replace with actual value
         'penyakit': jsonPenyakitScores,
         'hasil_id': highestScoredPenyakitId, // replace with actual value
-        'hasil_nilai': highestScoreString, // replace with actual value
+        'hasil_nilai': highestScoreString,
+        'unique_id': unique_id // replace with actual value
       };
 
       // send http post request
@@ -151,7 +154,7 @@ class _DiagnosaPageState extends State<DiagnosaPage> {
           builder: (BuildContext context) {
             return AlertDialog(
               title: Text('Error'),
-              content: Text('Gagal mendiagnosa data.'),
+              content: Text('Gagal mendiagnosa data.' + unique_id),
               actions: [
                 TextButton(
                   child: Text('OK'),
@@ -250,6 +253,16 @@ class _DiagnosaPageState extends State<DiagnosaPage> {
         );
       }
     });
+    _loadUniqueId();
+  }
+
+  Future<void> _loadUniqueId() async {
+    List<User> users = await DatabaseHelper.getUsers();
+    if (users.isNotEmpty) {
+      setState(() {
+        unique_id = users[0].uniqueId;
+      });
+    }
   }
 
   @override

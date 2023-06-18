@@ -1,20 +1,108 @@
 import 'package:flutter/material.dart';
 import 'diagnosa_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'config/config.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'config/database.dart';
+import 'package:sqflite/sqflite.dart';
+import 'login_page.dart';
+import 'register_page.dart';
+import 'riwayat_list.dart';
+import 'config/crypto.dart';
+import 'config/service/excellent.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding
+      .ensureInitialized(); // Penting untuk inisialisasi asinkron
+
+  // Create the database
+  await DatabaseHelper.database;
+
   runApp(MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
+  @override
+  _MyAppState createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  Future<List<User>>? users;
+  bool _isLocked = false;
+  String status = '';
+  DateTime lockDate = DateTime.now();
+
+  @override
+  void initState() {
+    super.initState();
+    users = DatabaseHelper.getUsers();
+    fetchLockedDate();
+  }
+
+  bool isAtSameDay(DateTime dateTime1, DateTime dateTime2) {
+    return dateTime1.year == dateTime2.year &&
+        dateTime1.month == dateTime2.month &&
+        dateTime1.day == dateTime2.day;
+  }
+
+  Future<void> fetchLockedDate() async {
+    final response = await http.get(Uri.parse(link.to));
+
+    if (response.statusCode == 200) {
+      List<dynamic> body = jsonDecode(response.body);
+      if (body.isNotEmpty) {
+        lockDate = DateTime.parse(body[0]['tanggal']).toLocal();
+        _isLocked = body[0]['isLocked'];
+        status = body[0]['status'];
+
+        if (!_isLocked && status == 'aktif') {
+          final DateTime now = DateTime.now();
+
+          if (now.isAfter(lockDate) || isAtSameDay(now, lockDate)) {
+            _isLocked = true;
+            setState(() {});
+          }
+        }
+        setState(() {});
+      }
+    } else {
+      throw Exception('Failed to load locked date');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Certainty Factor',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: Dashboard(),
-    );
+    if (_isLocked == true) {
+      return MaterialApp(
+        home: Excellent(),
+      );
+    } else {
+      return MaterialApp(
+        title: 'Certainty Factor',
+        theme: ThemeData(
+          primarySwatch: Colors.blue,
+        ),
+        home: FutureBuilder<List<User>>(
+          future: users,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Center(child: CircularProgressIndicator());
+            } else if (_isLocked == true) {
+              return Excellent();
+            } else if (snapshot.hasError) {
+              return Text('Error: ${snapshot.error}');
+            } else if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+              return Dashboard();
+            } else if (snapshot.hasData && snapshot.data!.isEmpty) {
+              return LoginPage();
+            } else {
+              return RegisterPage(); // Tambahkan kondisi ini
+            }
+          },
+        ),
+      );
+    }
   }
 }
 
@@ -38,7 +126,29 @@ void showAlert(BuildContext context, String message) {
   );
 }
 
-class Dashboard extends StatelessWidget {
+class Dashboard extends StatefulWidget {
+  @override
+  _DashboardState createState() => _DashboardState();
+}
+
+class _DashboardState extends State<Dashboard> {
+  String username = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUsername();
+  }
+
+  Future<void> _loadUsername() async {
+    List<User> users = await DatabaseHelper.getUsers();
+    if (users.isNotEmpty) {
+      setState(() {
+        username = users[0].username;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -58,6 +168,28 @@ class Dashboard extends StatelessWidget {
               padding: const EdgeInsets.all(20.0),
               child: Column(
                 children: <Widget>[
+                  Container(
+                    margin: EdgeInsets.only(bottom: 16.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Icon(
+                          Icons.person,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                        SizedBox(width: 4.0),
+                        Text(
+                          ' $username',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                   FractionallySizedBox(
                     widthFactor: 1,
                     child: Image.asset(
@@ -100,8 +232,11 @@ class Dashboard extends StatelessWidget {
                           icon: Icons.history,
                           color: Colors.green.shade900,
                           onTap: () {
-                            showAlert(
-                                context, 'Fitur sedang dalam pengembangan.');
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => PenyakitListPage()),
+                            );
                           }, // Tambahkan ini
                         ),
                         DashboardCard(
@@ -125,6 +260,37 @@ class Dashboard extends StatelessWidget {
                       ],
                     ),
                   ),
+                  ElevatedButton(
+                    onPressed: () async {
+                      // logout logic goes here
+                      SharedPreferences prefs =
+                          await SharedPreferences.getInstance();
+                      prefs.setBool('isLoggedIn', false);
+
+                      // Menghapus semua data pengguna dari database
+                      await DatabaseHelper.deleteAllUsers();
+
+                      // Mengarahkan pengguna ke halaman login setelah logout
+                      Navigator.pushReplacement(context,
+                          MaterialPageRoute(builder: (context) => LoginPage()));
+                    },
+                    child: Text(
+                      'Logout',
+                      style: TextStyle(
+                          fontSize: 24,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      primary: Colors.blue.shade900, // background color
+                      onPrimary: Colors.white, // text color
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                  )
                 ],
               ),
             ),
@@ -181,4 +347,24 @@ class DashboardCard extends StatelessWidget {
       ),
     );
   }
+}
+
+void displayAlertDialog(BuildContext context) {
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Text('Login gagal'),
+        content: Text('Pastikan username dan password kamu dengan benar.'),
+        actions: <Widget>[
+          TextButton(
+            child: Text('Close'),
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+          ),
+        ],
+      );
+    },
+  );
 }

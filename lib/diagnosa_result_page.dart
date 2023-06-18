@@ -31,7 +31,7 @@ class DiagnosaResultPage extends StatelessWidget {
             ),
             SizedBox(height: 16),
             Text(
-              'Skor: ${sortedScores[0].value['score'].toStringAsFixed(4)}',
+              'Skor: ${(sortedScores[0].value['score']*100).toStringAsFixed(2)}%',
               style: TextStyle(fontSize: 20, color: Colors.blueAccent),
             ),
             SizedBox(height: 16),
@@ -64,7 +64,7 @@ class DiagnosaResultPage extends StatelessWidget {
                           TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                     ),
                     subtitle: Text(
-                      'Skor: ${score.toStringAsFixed(4)}',
+                      'Skor: ${(score*100).toStringAsFixed(2)}%',
                       style: TextStyle(color: Colors.blueAccent),
                     ),
                   );
