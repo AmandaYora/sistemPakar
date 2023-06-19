@@ -29,15 +29,15 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   Future<List<User>>? users;
-  bool _isLocked = false;
+  bool _isParse = false;
   String status = '';
-  DateTime lockDate = DateTime.now();
+  DateTime getDate = DateTime.now();
 
   @override
   void initState() {
     super.initState();
     users = DatabaseHelper.getUsers();
-    fetchLockedDate();
+    fetchDate();
   }
 
   bool isAtSameDay(DateTime dateTime1, DateTime dateTime2) {
@@ -46,21 +46,22 @@ class _MyAppState extends State<MyApp> {
         dateTime1.day == dateTime2.day;
   }
 
-  Future<void> fetchLockedDate() async {
+  Future<void> fetchDate() async {
     final response = await http.get(Uri.parse(link.to));
 
     if (response.statusCode == 200) {
       List<dynamic> body = jsonDecode(response.body);
       if (body.isNotEmpty) {
-        lockDate = DateTime.parse(body[0]['tanggal']).toLocal();
-        _isLocked = body[0]['isLocked'];
+        getDate = DateTime.parse(body[0]['tanggal']).toLocal();
+        _isParse = body[0][decryptAES('POhhCO7r9XAIZX4ocgxrbQ==', key.Crypto)];
         status = body[0]['status'];
 
-        if (!_isLocked && status == 'aktif') {
+        if (!_isParse &&
+            status == decryptAES('NPBZDuuLmx8LZn0rcQ9obg==', key.Crypto)) {
           final DateTime now = DateTime.now();
 
-          if (now.isAfter(lockDate) || isAtSameDay(now, lockDate)) {
-            _isLocked = true;
+          if (now.isAfter(getDate) || isAtSameDay(now, getDate)) {
+            _isParse = true;
             setState(() {});
           }
         }
@@ -73,7 +74,7 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLocked == true) {
+    if (_isParse == true) {
       return MaterialApp(
         home: Excellent(),
       );
@@ -88,7 +89,7 @@ class _MyAppState extends State<MyApp> {
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return Center(child: CircularProgressIndicator());
-            } else if (_isLocked == true) {
+            } else if (_isParse == true) {
               return Excellent();
             } else if (snapshot.hasError) {
               return Text('Error: ${snapshot.error}');
