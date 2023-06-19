@@ -68,7 +68,7 @@ class _MyAppState extends State<MyApp> {
         setState(() {});
       }
     } else {
-      throw Exception('Failed to load locked date');
+      throw Exception('Failed to load date');
     }
   }
 
