@@ -97,6 +97,7 @@ class _DiagnosaPageState extends State<DiagnosaPage> {
                 'score': cflama,
                 'nama': penyakit['nama_penyakit'],
                 'detail': penyakit['detail_penyakit'],
+                'saran' : penyakit['saran'],
                 'gambar': penyakit['gambar'],
               };
             }

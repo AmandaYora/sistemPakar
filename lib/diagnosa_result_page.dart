@@ -14,45 +14,59 @@ class DiagnosaResultPage extends StatelessWidget {
         title: Text('Hasil Diagnosa'),
         backgroundColor: Colors.blueAccent,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Penyakit yang Diduga: ${sortedScores[0].value['nama']}',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 16),
-            LinearProgressIndicator(
-              value: sortedScores[0].value['score'],
-              backgroundColor: Colors.grey[300],
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.blueAccent),
-            ),
-            SizedBox(height: 16),
-            Text(
-              'Skor: ${(sortedScores[0].value['score']*100).toStringAsFixed(2)}%',
-              style: TextStyle(fontSize: 20, color: Colors.blueAccent),
-            ),
-            SizedBox(height: 16),
-            Text(
-              'Detail Penyakit:',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 8),
-            Text(
-              '${sortedScores[0].value['detail']}',
-              style: TextStyle(fontSize: 16),
-            ),
-            SizedBox(height: 16),
-            Divider(height: 2, color: Colors.black),
-            SizedBox(height: 16),
-            Text(
-              'Kemungkinan Lain:',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            Expanded(
-              child: ListView.builder(
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Penyakit yang Diduga: ${sortedScores[0].value['nama']}',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 16),
+              LinearProgressIndicator(
+                value: sortedScores[0].value['score'],
+                backgroundColor: Colors.grey[300],
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.blueAccent),
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Skor: ${(sortedScores[0].value['score'] * 100).toStringAsFixed(2)}%',
+                style: TextStyle(fontSize: 20, color: Colors.blueAccent),
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Detail Penyakit:',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 8),
+              Text(
+                '${sortedScores[0].value['detail']}',
+                style: TextStyle(fontSize: 16),
+              ),
+              SizedBox(height: 16),
+              Divider(height: 2, color: Colors.black),
+              SizedBox(height: 16),
+              Text(
+                'Saran:',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 8),
+              Text(
+                '${sortedScores[0].value['saran']}',
+                style: TextStyle(fontSize: 16),
+              ),
+              SizedBox(height: 16),
+              Divider(height: 2, color: Colors.black),
+              SizedBox(height: 16),
+              Text(
+                'Kemungkinan Lain:',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              ListView.builder(
+                shrinkWrap: true,
+                physics: NeverScrollableScrollPhysics(),
                 itemCount: sortedScores.length - 1,
                 itemBuilder: (BuildContext context, int index) {
                   String penyakit = sortedScores[index + 1].value['nama'];
@@ -64,14 +78,14 @@ class DiagnosaResultPage extends StatelessWidget {
                           TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                     ),
                     subtitle: Text(
-                      'Skor: ${(score*100).toStringAsFixed(2)}%',
+                      'Skor: ${(score * 100).toStringAsFixed(2)}%',
                       style: TextStyle(color: Colors.blueAccent),
                     ),
                   );
                 },
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
